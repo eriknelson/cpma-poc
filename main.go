@@ -61,7 +61,7 @@ type MasterConfigTransform struct {
 func (m MasterConfigTransform) Run(extraction string) (TransformOutput, error) {
 	fmt.Println("MasterConfigTransform::Run")
 	return FileTransformOutput{
-		FileData: fmt.Sprintf("[MasterConfigTransform output file contents]", m.RemoteFileName),
+		FileData: "[MasterConfigTransform output file contents]\n",
 	}, nil
 }
 
@@ -81,7 +81,7 @@ type NodeConfigTransform struct {
 func (n NodeConfigTransform) Run(extraction string) (TransformOutput, error) {
 	fmt.Println("NodeConfigTransform::Run")
 	return FileTransformOutput{
-		FileData: fmt.Sprintf("[NodeConfigTransform output file contents from: %s]", n.RemoteFileName),
+		FileData: "[NodeConfigTransform output file contents]\n",
 	}, nil
 }
 
@@ -102,7 +102,7 @@ type TransformRunner struct {
 
 // TransformRunner constructor
 func NewTransformRunner(config Config) *TransformRunner {
-	fmt.Printf("Building TransformRunner with RunnerConfig: %s", config.RunnerConfig)
+	fmt.Printf("Building TransformRunner with RunnerConfig: %s\n", config.RunnerConfig)
 	return &TransformRunner{Config: config.RunnerConfig}
 }
 
@@ -159,6 +159,8 @@ func main() {
 	}); err != nil {
 		fmt.Printf("%s", err.Error())
 	}
+
+	fmt.Println("fin")
 }
 
 func HandleError(err error) error {
