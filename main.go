@@ -71,7 +71,7 @@ func (m MasterConfigTransform) Extract() string {
 }
 
 func (m MasterConfigTransform) Validate(extraction string) error {
-	return nil
+	return nil // Simulate fine
 }
 
 type NodeConfigTransform struct {
