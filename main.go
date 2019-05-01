@@ -111,6 +111,8 @@ func (r TransformRunner) Run(transforms []Transform) error {
 
 	// For each transform, extract the data, validate it, and run the transform.
 	// Handle any errors, and finally flush the output to it's desired destination
+	// NOTE: This should be parallelized with channels unless the transforms have
+	// some dependency on the outputs of others
 	for _, transform := range transforms {
 		extraction := transform.Extract()
 
