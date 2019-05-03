@@ -6,7 +6,6 @@ import (
 
 // Mock data
 const MasterConfigFile = "/tmp/openshift.local.clusterup/kube-apiserver/master-config.yaml"
-const NodeConfigFile = "/tmp/openshift.local.clusterup/node/node-config.yaml"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Loader part of the ETL, abstracted because it's possible we may want a
@@ -18,20 +17,22 @@ type TransformOutput interface {
 // TransformOutput specific for flushing data to a file, in reality this will
 // probably be a set of output CRs, but could even have a TransformOutput
 // that flushes directly into the OCP4 cluster with the APIs.
-type FileTransformOutput struct {
-	FileData string
+type OCP4FileTransformOutput struct {
+	OCP4Files []string
 }
 
-func (f FileTransformOutput) Flush() error {
-	fmt.Println("Writing file data:")
-	fmt.Printf("%s", f.FileData)
+func (f OCP4FileTransformOutput) Flush() error {
+	// Probably need access to the config to know where to write
+	fmt.Println("Writing all OCP4Files to disk...")
+	for _, file := range f.OCP4Files {
+		fmt.Printf("%s\n", file)
+	}
 	return nil
 }
 
 // Simple config type to hold all the user input
 type Config struct {
 	MasterConfigFile string
-	NodeConfigFile   string
 	// RunnerConfig - just using a string as an example, likely would be a struct with more fields
 	RunnerConfig string
 }
@@ -48,50 +49,55 @@ type Config struct {
 // Undecided if extract's return type should be different here, I'm not seeing
 // a case where it's anything but a string. Could be a struct with more fields.
 ////////////////////////////////////////////////////////////////////////////////
+type Extraction interface {
+	Transform() (TransformOutput, error)
+}
+
 type Transform interface {
-	Run(string) (TransformOutput, error)
-	Validate(string) error
-	Extract() string
+	Validate(Extraction) error
+	Extract() Extraction
+}
+
+type MasterConfigExtraction struct {
+	MasterConfigFileContents string
+	IdentityProviders        []string
+	OtherDownloadedData      string
 }
 
 type MasterConfigTransform struct {
-	RemoteFileName string
+	RemoteFileName         string
+	MasterConfigExtraction MasterConfigExtraction
 }
 
-func (m MasterConfigTransform) Run(extraction string) (TransformOutput, error) {
-	fmt.Println("MasterConfigTransform::Run")
-	return FileTransformOutput{
-		FileData: "[MasterConfigTransform output file contents]\n",
-	}, nil
-}
-
-func (m MasterConfigTransform) Extract() string {
+func (m MasterConfigTransform) Extract() Extraction {
 	fmt.Println("MasterConfigTransform::Extract")
-	return "[Master config source contents]"
+	// Here is where you download all the data you need by crawling the remote files
+	// Then build up an Extraction with all the downloaded data
+	fmt.Printf("Downloading the master config file from: %s\n", m.RemoteFileName)
+	fmt.Printf("Reading identity providers and downloading relevant files now that we have the master config content\n")
+
+	return MasterConfigExtraction{
+		MasterConfigFileContents: "[Master config file contents]",
+		IdentityProviders:        []string{"HTPassword"},
+		OtherDownloadedData:      "other downloaded data",
+	}
 }
 
-func (m MasterConfigTransform) Validate(extraction string) error {
-	return nil // Simulate fine
-}
-
-type NodeConfigTransform struct {
-	RemoteFileName string
-}
-
-func (n NodeConfigTransform) Run(extraction string) (TransformOutput, error) {
-	fmt.Println("NodeConfigTransform::Run")
-	return FileTransformOutput{
-		FileData: "[NodeConfigTransform output file contents]\n",
+func (m MasterConfigExtraction) Transform() (TransformOutput, error) {
+	fmt.Println("MasterConfigExtraction::Transform")
+	return OCP4FileTransformOutput{
+		OCP4Files: []string{
+			// Could forsee functions called here that take master contents and turn it into ocp4 file
+			// Ex: transformMasterConfigFile(ocp3FileContent) ocp4CRFile
+			fmt.Sprintf("CR from master config contents: %s", m.MasterConfigFileContents),
+			fmt.Sprintf("Secret from IdentityProviders: %s", m.IdentityProviders),
+		},
 	}, nil
 }
 
-func (m NodeConfigTransform) Validate(extraction string) error {
+func (m MasterConfigTransform) Validate(extraction Extraction) error {
+	fmt.Println("Looking at the MasterConfigExtraction and validating")
 	return nil // Simulate fine
-}
-
-func (m NodeConfigTransform) Extract() string {
-	fmt.Println("NodeConfigTransform::Extract")
-	return "[Node config source contents]"
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -120,7 +126,7 @@ func (r TransformRunner) Run(transforms []Transform) error {
 			return HandleError(err)
 		}
 
-		output, err := transform.Run(extraction)
+		output, err := extraction.Transform()
 		if err != nil {
 			HandleError(err)
 		}
@@ -139,7 +145,6 @@ func LoadConfig() Config {
 	// Mocking out the details of collecting cli input and file input
 	config := Config{
 		MasterConfigFile: MasterConfigFile,
-		NodeConfigFile:   NodeConfigFile,
 		RunnerConfig:     "some_runner_config",
 	}
 
@@ -154,9 +159,6 @@ func main() {
 	if err := transformRunner.Run([]Transform{
 		MasterConfigTransform{
 			RemoteFileName: MasterConfigFile,
-		},
-		NodeConfigTransform{
-			RemoteFileName: NodeConfigFile,
 		},
 	}); err != nil {
 		fmt.Printf("%s", err.Error())
