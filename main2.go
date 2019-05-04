@@ -39,9 +39,14 @@ type IdentityProviderMigration struct {
 
 // The following doesn't work, must use generic extraction and a type assertion
 // QUESTION: Why doesn't this compile?
-func (e IdentityProviderExtraction) Validate(ipex IdentityProviderExtraction) error {
-	//func (e IdentityProviderExtraction) Validate(extraction Extraction) error {
-	fmt.Printf("Validate remote data: %s\n", ipex.Data)
+//func (e IdentityProviderExtraction) Validate(ipex IdentityProviderExtraction) error {
+func (e IdentityProviderExtraction) Validate(extraction Extraction) error {
+	ie, ok := extraction.(IdentityProviderExtraction)
+	if !ok {
+		fmt.Println("return dumb error")
+	}
+
+	fmt.Printf("Validate remote data: %s\n", ie.Data)
 	return nil // Passes validation
 }
 
