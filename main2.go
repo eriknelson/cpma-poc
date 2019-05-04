@@ -16,7 +16,7 @@ func (t TestOutput) Flush() {
 
 type Extraction interface {
 	Transform() (TransformOutput, error)
-	Validate() error
+	Validate(Extraction) error
 }
 
 type Migration interface {
@@ -38,8 +38,10 @@ type IdentityProviderMigration struct {
 }
 
 // The following doesn't work, must use generic extraction and a type assertion
-func (e IdentityProviderExtraction) Validate() error {
-	fmt.Printf("Validate remote data: %s\n", e.Data)
+// QUESTION: Why doesn't this compile?
+func (e IdentityProviderExtraction) Validate(ipex IdentityProviderExtraction) error {
+	//func (e IdentityProviderExtraction) Validate(extraction Extraction) error {
+	fmt.Printf("Validate remote data: %s\n", ipex.Data)
 	return nil // Passes validation
 }
 
@@ -56,7 +58,7 @@ func main() {
 	}
 
 	extraction := mig.Extract()
-	if err := extraction.Validate(); err != nil {
+	if err := extraction.Validate(extraction); err != nil {
 		fmt.Println(err)
 	}
 
